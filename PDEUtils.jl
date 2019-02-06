@@ -74,7 +74,7 @@ function δδ(size::Int, step::Number)
 
  function ⊗(A::Array{N,2},B::Array{N,2}, direction::Int) where N<:Number
      s = size(B)
-     C = zeros(s)
+     C = zeros(N,s)
      if direction == 1
          for i in 1:s[1]
              C[:,i] = A*B[:,i]
@@ -91,6 +91,27 @@ function δδ(size::Int, step::Number)
     end
     return C
 end
+
+function ⊗(A::Array{N,2},B::Array{Complex{Float64},2}, direction::Int) where N<:Number
+    s = size(B)
+    C = Complex.(zeros(s))
+    if direction == 1
+        for i in 1:s[1]
+            C[:,i] = A*B[:,i]
+        end
+   elseif direction == 2
+       Bt = Transpose(B)
+       C = Transpose(C)
+       for i in 1:s[2]
+           C[:,i] = A*Bt[:,i]
+       end
+       C = Transpose(C)
+   else
+       throw("direction too large, choose 1 for through columns and 2 for through rows")
+   end
+   return C
+end
+
 function ⊗(A::CuArray,B::CuArray, direction::Int64)
     s = size(B)
     C = cu(zeros(s))

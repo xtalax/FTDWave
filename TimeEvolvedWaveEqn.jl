@@ -49,6 +49,14 @@ function n(x,y)
     return n
 end
 
+# implements a reradiating boundary condition at all edges - rABC :https://personalpages.manchester.ac.uk/staff/fumie.costen/tmp/HuygensABC.pdf p 379
+function rABC!(u,t)
+    u[1, :, t] = u[2, :, t-1]
+    u[end, :, t] = u[end-1, :, t-1]
+    u[:, 1, t] = u[:, 2, t-1]
+    u[:, end, t] = u[:, end-1, t-1]
+end
+
 
 # Wave Equation
 function Wave!(u, t, factor, δxx, δyy, s)
@@ -83,12 +91,13 @@ function EM_Propagate(xmin, xmax, Nx, ymin = xmin, ymax = xmax, Ny = Nx)
 
         f₀ = c₀/(k*Δx)
         ω₀ = 2*pi*f₀
+        k₀ = c₀/ω₀
 
         fs = 1/Δt
         fgrid = fs*(0:(Nt))/(Nt)
 
         w = rect.(fgrid/(2*f₀))
-        wt= circshift(imag.(ifft(w)*Nt)/100, Nt/4)
+        wt= circshift((ifft(w)*Nt)/100, Nt/4)
         wt = unitize(wt)
 
         δxx = δδ(Nx, Δx)
@@ -160,69 +169,15 @@ function compile_gif_simple(x,y,u)
         frame(anim,plot)
         next!(prog)
 
-    end
-    #=@sync for key in sort(collect(keys(frames)))
-        frame(anim,frames[key])
-    end=#
-
-    gif(anim, filepath*"animation$Nt.gif", fps = 30)
-end
-
-
-
-
-
-
-function compile_gif(x, y, bg, field, source, xval)
-    pyplot(leg=false, ticks=nothing)
-    Nx, Ny, Nt = size(field)
-    prog = Progress(Nt-1, 1)
-    global zs = zeros(0)
-    global anim = Animation()
-
-    anim = @animate for i in 1:(Nt-1)
-
-        if bg[:,:,i] ≈ field[:,:,i]
-            continue
-            prog = Progress(Nt-1-i, 1)
-        end
-
-        # create a plot with 3 subplots and a stom layout
-        l = @layout [a; b{0.2h}]
-        surf = surface(
-            x, y, field[: , : ,i],
-            xlims=(xmin,xmax), ylims=(ymin,ymax) , zlims=(-0.5,0.5)
-
-         );
-        # induce a slight oscillating camera angle sweep, in degrees (azimuth, altitude)
-        plot!(surf, camera=(15*cos(i), 40));
-
-        # add a tracking line
-        fixed_x = xval*ones(Nx)
-        response = field[2, :, i] - bg[2, :, i]
-        #response_sum = sum(response)
-        plot!(surf, fixed_x, y, response, line = (:black, 5, 0.2));
-        # add to and show the tracked values over time
-        global zs = vcat(zs, sum(response))
-        bar = plot(1:i, zs, palette = cgrad(:blues).colors);
-        #assemble the plot
-        plot(surf, bar, layout=l)
-
-        # increment the progress bar
-        next!(prog)
-    end
-    gif(anim, filepath*"animation$Nt.gif", fps = 30)
-
-end =#
 
 function makie_animation(x,y,t,u)
     prog = Progress(Nt, 1)
     println("---------Animating Data-----------")
-    scene = Scene();
+    scene = Scene(limits = FRect(x[1],y[1],x[end],y[end]));
 
     c = lines!(scene, Circle(Point2f0(0.1, 0.5), 0.1f0), color = :red, offset = Vec3f0(0, 0, 1))
 
-    surf = surface!(scene, x, y, u[:,:,2])[end]
+    surf = surface!(scene, x, y, u[:,:,end])[end]
     record(scene, filepath*"EM_animation_Makie_$(Nt)$([2,3,50]).mp4", 1:Nt) do i
         surf[3] = u[:,:,i]
         next!(prog)
