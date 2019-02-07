@@ -3,6 +3,7 @@ using ProgressMeter
 using ImageMagick
 using FFTW
 using Makie
+using Rotations
 #using Plots
 
 
@@ -49,6 +50,31 @@ function n(x,y)
     return n
 end
 
+function n(x,y, origin_prime, θ=0.0)
+    Rθ =[ cos(θ) -sin(θ) ; sin(θ) cos(θ)]
+    Nx = length(x)
+    Ny = length(y)
+
+    n = ones(Nx, Ny)
+    d1 = 0.305
+    d2 = 0.4
+
+
+    for yi in 1:Ny, xi in 1:Nx
+        r = [x[xi], y[yi]]
+        r_prime = Rθ*(r.-origin_prime)
+        if -d1/2  <= r_prime[1] <= d1/2
+            if -d2/2  <= r_prime[2] <= d2/2
+
+                n[xi,yi] = sqrt(2.3)
+
+            end
+        end
+    end
+    return n
+end
+
+
 # implements a reradiating boundary condition at all edges - rABC :https://personalpages.manchester.ac.uk/staff/fumie.costen/tmp/HuygensABC.pdf p 379
 function rABC!(u,t)
     u[1, :, t] = u[2, :, t-1]
@@ -57,11 +83,30 @@ function rABC!(u,t)
     u[:, end, t] = u[:, end-1, t-1]
 end
 
+function HeugensABC!(u, t, Δx, Δy, Δt)
+    A⁺ = (1 - Δx/(Δt*c₀))
+    A⁻ = 1/A⁺
+
+    if Δx == Δy
+        u[1,:,t] =     A⁺.*(u[1,:,t].-u[1,:,t-1])+u[1,:,t]
+        u[end,:,t] = A⁻.*(u[end,:,t].-u[end,:,t-1])+u[end,:,t]
+        u[:, 1,t] =    A⁺.*(u[1,:,t].-u[1,:,t-1])-u[1,:,t]
+        u[:,end,t] = A⁻.*(u[:,end,t].-u[:,end,t-1])+u[:,end,t]
+    else
+        B⁺ = (1 - Δy/(Δt*c₀))
+        B⁻ = 1/B⁺
+
+        u[1,:,t] =     A⁺.*(u[1,:,t].-u[1,:,t-1])+u[1,:,t]
+        u[end,:,t] = A⁻.*(u[end,:,t].-u[end,:,t-1])+u[end,:,t]
+        u[:, 1,t] =    B⁺.*(u[1,:,t].-u[1,:,t-1])+u[1,:,t]
+        u[:,end,t] = B⁻.*(u[:,end,t].-u[:,end,t-1])+u[:,end,t]
+    end
+end
 
 # Wave Equation
-function Wave!(u, t, factor, δxx, δyy, s)
+function Wave!(u, t, Δx, Δy, Δt, factor, δxx, δyy, s)
     u[:,:,t] = factor.*(∇(u[:,:,t-1], δxx, δyy) .+ s[:,:,t-1]) .+ 2.0.*u[:,:,t-1] .- u[:,:,t-2]
-
+    HeugensABC!(u, t, Δx, Δy, Δt)
 end
 
 ###############################################################################
@@ -69,7 +114,7 @@ end
 ###############################################################################
 
 
-function EM_Propagate(xmin, xmax, Nx, ymin = xmin, ymax = xmax, Ny = Nx)
+function EM_Propagate(xmin, xmax, Nx, theta, ymin = xmin, ymax = xmax, Ny = Nx)
 
 
     ###############################################################################
@@ -83,11 +128,11 @@ function EM_Propagate(xmin, xmax, Nx, ymin = xmin, ymax = xmax, Ny = Nx)
          x = xmin:Δx:xmax    ; y = ymin:Δy:ymax
 
         Δt = Δx/(c₀*2)
-        global Nt = Int(2*(xmax-xmin)/(c₀*Δt))
+        global Nt = Int(floor(3*(xmax-xmin)/(c₀*Δt)))
         tmin = 0 ; tmax = tmin + Δt*Nt
         t = tmin:Δt:tmax
 
-        k = 16
+        k = 8
 
         f₀ = c₀/(k*Δx)
         ω₀ = 2*pi*f₀
@@ -97,11 +142,15 @@ function EM_Propagate(xmin, xmax, Nx, ymin = xmin, ymax = xmax, Ny = Nx)
         fgrid = fs*(0:(Nt))/(Nt)
 
         w = rect.(fgrid/(2*f₀))
-        wt= circshift((ifft(w)*Nt)/100, Nt/4)
+        W = ifft(w)
+        wt= circshift((real.(w)+imag.(w)*Nt)/100, floor(Nt/4))
         wt = unitize(wt)
 
         δxx = δδ(Nx, Δx)
         δyy = δδ(Ny, Δy)
+        δ⁻t = δ⁻(Nt, Δt)
+        HuygensABC⁺ = δ⁻t*(Δt-Δx/c₀)
+        HeugensABC⁻ =  δ⁻t.*1/(Δt-Δx/c₀)
         ###############################################################################
         # FIELD DEFINITION
         ###############################################################################
@@ -114,13 +163,13 @@ function EM_Propagate(xmin, xmax, Nx, ymin = xmin, ymax = xmax, Ny = Nx)
 
         S= zeros(Nx,Ny,Nt-1)
 
-     S = [xi == 2 ? wt[ti] : 0.0 for xi in 1:Nx, yi in 1:Ny, ti in 1:(Nt-1)]
-    #    S = [xi == 2 ? sin(ω₀*t[ti]) : 0.0 for xi in 1:Nx, yi in 1:Ny, ti in 1:(Nt-1)]
+     S = [xi == 3 ? wt[ti] : 0.0 for xi in 1:Nx, yi in 1:Ny, ti in 1:(Nt-1)]
+        #S = [xi == 3 ? sin(ω₀*t[ti]) : 0.0 for xi in 1:Nx, yi in 1:Ny, ti in 1:(Nt-1)]
         ###############################################################################
         # MEDIUM INITIALISATION
         ###############################################################################
         # compute the medium
-        refrindex = n(x, y)
+        refrindex = n(x, y,[0,0], pi/6)
         factor = ((Δt.^2).*(c₀./refrindex).^2)
 
         factorbg = (Δt.*c₀).^2
@@ -137,8 +186,8 @@ function EM_Propagate(xmin, xmax, Nx, ymin = xmin, ymax = xmax, Ny = Nx)
     # propagate and plot
     println("------- Simulating Field -------")
     for i in 3:Nt
-        Wave!(u, i, factor, δxx, δyy, S)
-        Wave!(bg, i, factorbg, δxx, δyy, S)
+        Wave!(u, i, Δx, Δy, Δt, factor, δxx, δyy, S)
+        Wave!(bg, i, Δx, Δy, Δt, factorbg, δxx, δyy, S)
 
         next!(prog)
     end
@@ -149,35 +198,16 @@ end
 ###############################################################################
 # COMPILE GIF
 ###############################################################################
-#=
-function compile_gif_simple(x,y,u)
-
-    Nx, Ny, Nt = size(u)
-    xmin = minimum(x) ;ymin = minimum(y)
-    xmax = maximum(x) ;ymax = maximum(y)
-    println("---------Compiling Animation-----------")
-    pyplot()
-    prog = Progress(Nt, 1)
-    global anim = Animation()
-    #frames = Dict()
-    for i in 1:Nt
-        cameraAngle = 2*pi*i/Nt
-
-        plot = surface(x,y, u[:,:,i], xlims=(xmin,xmax), ylims=(ymin,ymax) , zlims=(-0.5,0.5))
-        surface!(plot, camera=(15*cos(cameraAngle), 30))
-        #push!(a, i=>plot)
-        frame(anim,plot)
-        next!(prog)
 
 
 function makie_animation(x,y,t,u)
     prog = Progress(Nt, 1)
     println("---------Animating Data-----------")
-    scene = Scene(limits = FRect(x[1],y[1],x[end],y[end]));
+    scene = Scene(resolution = (1024,768), limits = FRect(x[1],x[end],y[1],y[end]),axis= frame);
 
-    c = lines!(scene, Circle(Point2f0(0.1, 0.5), 0.1f0), color = :red, offset = Vec3f0(0, 0, 1))
-
-    surf = surface!(scene, x, y, u[:,:,end])[end]
+    surf = surface!(scene, x, y, u[:,:,end],)[end]
+    center!(scene)
+    camera(scene)
     record(scene, filepath*"EM_animation_Makie_$(Nt)$([2,3,50]).mp4", 1:Nt) do i
         surf[3] = u[:,:,i]
         next!(prog)
@@ -187,11 +217,11 @@ end
 # PROPAGATE
 ###############################################################################
 
-xmin, xmax = -5, 5
+xmin, xmax = -2, 2
 ymin = xmin ; ymax = xmax
 
 
-@time x, y, t, background, field, source, xval = EM_Propagate(xmin, xmax, 300)
+@time x, y, t, background, field, source, xval = EM_Propagate(xmin, xmax, 200, 2*pi)
 
 #response = field.-background
 
@@ -199,5 +229,3 @@ ymin = xmin ; ymax = xmax
 
 #compile_gif(x, y, background, field, xval)
 @time makie_animation(x,y,t,field)
-
-t
