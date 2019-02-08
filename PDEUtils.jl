@@ -97,15 +97,15 @@ end
 function δδ(size::Int, step::Number)
      δ = zeros(size,size)
      for i in 1:size
-         δ[i,i] = 2.0
+         δ[i,i] = -2.0
+
          if i >= 2
-             δ[i-1,i] = δ[i,i-1] = -1
+             δ[i-1,i] = δ[i,i-1] = 1.0
          end
      end
-     δ[1,2:4] =  [-5,4,-1]
-     δ[end, end-3:end-1] = [-1, 4, -5]
-     
-     return sparse(δ./step^2)
+     δ[1,1:4] =  [2.0,-5.0,4.0,-1.0]
+      δ[end, end-3:end] = [-1.0,4.0,-5.0,2.0]
+     return δ./step^2
   end
 
  function ⊗(A::AbstractArray{N,2},B::AbstractArray{N,2}, direction::Int) where N<:Number

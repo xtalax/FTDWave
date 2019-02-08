@@ -15,6 +15,7 @@
     using EZAnimate
     using DiscreteAxis
     using FTDWave
+    using SignalProcessing
     #using Plots
     #my modules
 
@@ -77,7 +78,8 @@
                                         initialfield = f,
                                         initialderivative = g,
                                         refrindex = n,
-                                        source_type = "sinc"
+                                        source_type = "sinc",
+                                        time_multiplier = 3
                                         )
 
     #response = field.-background
@@ -85,4 +87,4 @@
     #surface(x,y,response[:,:,end-10])
 
     #compile_gif(x, y, background, field, xval)
-    @time makie_animation3D(x,y,t,abs.(field), filepath)
+    @time makie_animation3D(x,y,t, unitize(field),filepath)

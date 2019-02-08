@@ -15,20 +15,23 @@ export ftd_propagate
 
     function source(x,y,t; type)
         if type == "impulse"
-            out = zeros(Float64, length(t))
-            out[2] = 1
+            out = zeros(x.N,y.N,t.N)
+            return out[2,:,2] = 1
         elseif type == "sinc"
-            k = 4
+            k = 16
             f₀ = c₀/(k*x.Δ)
             ω₀ = 2*pi*f₀
             fs = 1/t.Δ
-            fgrid = fs*(0:(t.N))/(t.N)
+            fgrid = fs*(0:(t.N-1))/(t.N-1)
             w = rect.(fgrid/(2*f₀))
             wt= circshift(imag.(ifft(w)*(t.N)), round(Int,t.N/4))
             out = unitize(wt)
-            return wt
+            return [xi==2 ? wt[ti] : 0.0 for xi in x.i, Y in y, ti in t.i]
+        elseif type == "sinusoid"
+            return [i==2 ? sin.(ω₀*T) : 0.0 for xi in x.i, Y in y, ti in t.i]
+
         else
-            return sin.(ω₀*t.pts)
+            return zeros(t.N)
         end
     end
 
@@ -71,7 +74,8 @@ export ftd_propagate
                             initialfield,
                             initialderivative,
                             source_type,
-                            boundary_conditions = "Dirichlet" )
+                            boundary_conditions = "Dirichlet",
+                            time_multiplier = 2 )
 
 
         ###############################################################################
@@ -80,11 +84,9 @@ export ftd_propagate
             #y.N = Int64(floor((x[end]-x[1])/(y[end]-y[1])*x.N))
 
             Δt = x.Δ/(c₀*2)
-            Nt = round(Int, 2*(maximum(x.pts)-minimum(x.pts))/(c₀*Δt))
+            Nt = round(Int, time_multiplier*(maximum(x.pts)-minimum(x.pts))/(c₀*Δt))
             tmin = 0 ; tmax = tmin + Δt*Nt
             t = LinearAxis(tmin, tmax, Δt)
-
-
 
             δxx = (δδ(x.N, x.Δ))
             δyy = (δδ(y.N, y.Δ))
@@ -103,7 +105,7 @@ export ftd_propagate
             ###############################################################################
             # compute the medium
 
-            factor = ((t.Δ.^2).*(c₀./n).^2)
+            factor = ((t.Δ.*c₀./n).^2)
 
             factorbg = (t.Δ.*c₀).^2
 

@@ -19,7 +19,7 @@ function convolvepower(in,n)
 
     return Y
 end
-unitize(A::AbstractVecOrMat) = A./(maximum(abs.(A)))
+unitize(A::AbstractArray) = A./(maximum(abs.(A)))
 
 #x = -2:0.01:2
 
