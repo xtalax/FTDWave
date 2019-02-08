@@ -1,16 +1,17 @@
 module EZAnimate
 export makie_animation3D, plots_gif3D
-
+###########################################################
+###########################################################
     using Makie
     using ProgressMeter
-    function makie_animation3D(x,y,t,u)
+    function makie_animation3D(x,y,t,u, filepath)
         prog = Progress(t.N, 1)
         println("---------Animating Data-----------")
-        scene = Scene();
-
+        scene = Scene(resolution = (1000, 1000));
+        center!(scene)
         #c = lines!(scene, Circle(Point2f0(0.1, 0.5), 0.1f0), color = :red, offset = Vec3f0(0, 0, 1))
-
-        surf = Makie.surface!(scene, x.pts, y.pts, u[:,:,2])[end]
+        surf = Makie.surface!(scene, x.pts, y.pts, u[:,:,end])[end]
+        scene
         record(scene, filepath*"EM_animation_Makie_Complex$(t.N)$([2,3,50]).mp4", 1:t.N) do i
             surf[3] = u[:,:,i]
             next!(prog)
@@ -31,7 +32,6 @@ export makie_animation3D, plots_gif3D
         #frames = Dict()
         for i in 1:t.N
             cameraAngle = 2*pi*i/t.N
-
             plot = surface(x,y, u[:,:,i], xlims=(xmin,xmax), ylims=(ymin,ymax) , zlims=(-0.5,0.5))
             surface!(plot, camera=(15*cos(cameraAngle), 30))
             #push!(a, i=>plot)

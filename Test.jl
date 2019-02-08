@@ -1,4 +1,4 @@
-module Test
+
 
     function pwd_path!(LOAD_PATH)
         for path in LOAD_PATH
@@ -58,7 +58,7 @@ module Test
     ymin = xmin ; ymax = xmax
     x = LinearAxis(xmin,xmax,N)
     y = LinearAxis(ymin,ymax,N)
-
+    println("Step size is $(x.Δ)")
 
     ###############################################################################
     # FIELD DEFINITION
@@ -85,5 +85,4 @@ module Test
     #surface(x,y,response[:,:,end-10])
 
     #compile_gif(x, y, background, field, xval)
-    @time makie_animation3D(x,y,t,abs.(field))
-end
+    @time makie_animation3D(x,y,t,abs.(field), filepath)

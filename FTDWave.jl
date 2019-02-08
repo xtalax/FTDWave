@@ -2,17 +2,20 @@ module FTDWave
 export ftd_propagate
 
     using LinearAlgebra
+    using FFTW
+    using SparseArrays
     using ProgressMeter
     using PDEUtils
     using SignalProcessing
-    using FFTW
+
     using DiscreteAxis
+
     const c₀ = 3*10^8
     FFTW.set_num_threads(4)
 
     function source(x,y,t; type)
         if type == "impulse"
-            out = zeros(Complex{Float64}, length(t))
+            out = zeros(Float64, length(t))
             out[2] = 1
         elseif type == "sinc"
             k = 4
@@ -21,7 +24,7 @@ export ftd_propagate
             fs = 1/t.Δ
             fgrid = fs*(0:(t.N))/(t.N)
             w = rect.(fgrid/(2*f₀))
-            wt= circshift(ifft(w)*(t.N), round(Int,t.N/4))
+            wt= circshift(imag.(ifft(w)*(t.N)), round(Int,t.N/4))
             out = unitize(wt)
             return wt
         else
@@ -52,7 +55,7 @@ export ftd_propagate
 
     # Wave Equation
     function Wave!(u, i, x, y, t, factor, δxx, δyy, s; bcs)
-        @views u[:,:,i] = factor.*(∇(u[:,:,i-1], δxx, δyy) .+ s[i-1]) .+ 2.0.*u[:,:,i-1] .- u[:,:,i-2]
+        @views u[:,:,i] = factor.*(∇(u[:,:,i-1], δxx, δyy) .+ s[i-1])  .+ 2.0.*u[:,:,i-1] .- u[:,:,i-2]
         #if boundary_conditions == "HeugensABC"
             #HeugensABC!(u, i, x.Δ, y.Δ, t.Δ)
         #end
@@ -83,24 +86,24 @@ export ftd_propagate
 
 
 
-            δxx = Complex.(δδ(x.N, x.Δ))
-            δyy = Complex.(δδ(y.N, y.Δ))
+            δxx = (δδ(x.N, x.Δ))
+            δyy = (δδ(y.N, y.Δ))
 
-            u = zeros(Complex{Float64},x.N,y.N,t.N)
+            u = zeros(Float64,x.N,y.N,t.N)
             u[:,:,2] =  [initialfield(X,Y) for X in x, Y in y]
             G = [initialderivative(X,Y) for X in x, Y in y]
             n =  [refrindex(X,Y) for X in x, Y in y]
 
             S= source(x,y,t,type = source_type)
 
-
+            println(δxx)
         #    S = [xi == 2 ? sin(ω₀*t[ti]) : 0.0 for xi in x.i, yi in y.i, ti in 1:(t.N-1)]
             ###############################################################################
             # MEDIUM INITIALISATION
             ###############################################################################
             # compute the medium
 
-            factor = Complex.(((t.Δ.^2).*(c₀./n).^2))
+            factor = ((t.Δ.^2).*(c₀./n).^2)
 
             factorbg = (t.Δ.*c₀).^2
 
@@ -121,7 +124,7 @@ export ftd_propagate
 
             next!(prog)
         end
-        println("Done!")
+        println("\n------------Done!----------------")
         return t, bg, u, S
     end
 end
