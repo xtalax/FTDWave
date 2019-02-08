@@ -1,6 +1,11 @@
+module PDEUtils
+export  δ⁻, δδ, ∇
 
 using Base.Cartesian
-using CuArrays
+using LinearAlgebra
+using DiscreteAxis
+using SparseArrays
+#using CuArrays
 for N = 1:5
     @eval begin
         function laplacian(A::Array{T,$N}) where T<:Number
@@ -23,6 +28,7 @@ for N = 1:5
     end
 end
 
+#function laplacian(A::AbstractArray{T}, ) where T <: Number
 
 
 
@@ -39,6 +45,30 @@ function δ⁻(size::Int, step::Number)
     return (1/step).*δ
 end
 
+function δ⁺(F::AbstractVector{N}, axis::DAxis) where N <: Number
+    δ = similar(F)
+    for i in axis.i[1:end-1]
+        δ[i] = (F[i+1]-F[i])/axis.Δ[i]
+    end
+    δ[end] = -F[end]
+    return δ
+end
+
+function δ⁻(F::AbstractVector{N}, axis::DAxis) where N <: Number
+    δ = similar(F)
+    for i in axis.i[2:end]
+        δ[i] = (F[i]-F[i-1])/axis.Δ[i]
+    end
+    return δ
+end
+
+function δδ(F::AbstractVector{N}, axis::DAxis) where N <: Number
+    δ = similar(F)
+    for i in axis.i[2:end-1]
+        δ[i] = 2*F[i]-F[i-1]-F[i-2]/axis
+    end
+    return δ
+end
 
 function δ⁺(size::Int, step::Number)
     δ = zeros(size,size)
@@ -61,29 +91,35 @@ function δ(size, step)
             δ[i+1,i] = 1
         end
     end
-    return δ
+    return sparse(δ)
 end
 
 function δδ(size::Int, step::Number)
-     δ = δ⁻(size, step)*δ⁺(size, step)
-     δ[2,1] = δ[2,1]*2
-     δ[end-1,end] = δ[end-1,end]*2
-     δ[end,end]=δ[1,1]
-     return δ
+     δ = zeros(size,size)
+     for i in 1:size
+         δ[i,i] = 2.0
+         if i >= 2
+             δ[i-1,i] = δ[i,i-1] = -1
+         end
+     end
+     δ[1,2:4] =  [-5,4,-1]
+     δ[end, end-3:end-1] = [-1, 4, -5]
+     
+     return sparse(δ./step^2)
   end
 
- function ⊗(A::Array{N,2},B::Array{N,2}, direction::Int) where N<:Number
+ function ⊗(A::AbstractArray{N,2},B::AbstractArray{N,2}, direction::Int) where N<:Number
      s = size(B)
-     C = zeros(s)
+     C = zeros(N,s)
      if direction == 1
          for i in 1:s[1]
-             C[:,i] = A*B[:,i]
+             @views C[:,i] = A*B[:,i]
          end
     elseif direction == 2
         Bt = Transpose(B)
-        C = Transpose(C)
+
         for i in 1:s[2]
-            C[:,i] = A*Bt[:,i]
+            @views C[:,i] = A*Bt[:,i]
         end
         C = Transpose(C)
     else
@@ -91,6 +127,24 @@ function δδ(size::Int, step::Number)
     end
     return C
 end
+
+ function SliceProduct(A::Array{N,2},B::Array{N,2}, direction::Int) where N<:Number
+     s = size(B)
+     C = zeros(N,s)
+     if direction == 1
+         for i in 1:s[1]
+            @views C[:,i] = A*B[:,i]
+         end
+    elseif direction == 2
+        for i in 1:s[2]
+            @views C[i,:] = A*B[i,:]
+        end
+    else
+        throw("direction too large, choose 1 for through columns and 2 for through rows")
+    end
+    return C
+end
+#=
 function ⊗(A::CuArray,B::CuArray, direction::Int64)
     s = size(B)
     C = cu(zeros(s))
@@ -105,5 +159,6 @@ function ⊗(A::CuArray,B::CuArray, direction::Int64)
    end
    return C
 end
-
+=#
 ∇(u, δxx, δyy) = ⊗(δxx,u,1).+⊗(δyy,u,2)
+end

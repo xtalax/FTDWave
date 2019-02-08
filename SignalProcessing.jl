@@ -1,4 +1,5 @@
-
+module SignalProcessing
+export rect, convolve, convolvepower, unitize
 using FFTW
 FFTW.set_num_threads(4)
 
@@ -18,7 +19,7 @@ function convolvepower(in,n)
 
     return Y
 end
-unitize(A::AbstractVecOrMat) = A./(maximum(A))
+unitize(A::AbstractVecOrMat) = A./(maximum(abs.(A)))
 
 #x = -2:0.01:2
 
@@ -29,3 +30,4 @@ unitize(A::AbstractVecOrMat) = A./(maximum(A))
 #F = rfft(Ft)/length(x)
 #plot(x,Ft)
 #plot(fgrid,F)
+end
