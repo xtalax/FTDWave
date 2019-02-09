@@ -7,7 +7,7 @@ export makie_animation3D, plots_gif3D
     function makie_animation3D(x,y,t,u, filepath)
         prog = Progress(t.N, 1)
         println("---------Animating Data-----------")
-        scene = Scene(resolution = (1000, 1000));
+        scene = Scene(resolution = (500, 500));
         limits = FRect3D(Vec3f0(x.pts[1], y.pts[1], x.pts[1]) , Vec3f0(x.pts[end]-x.pts[1], y.pts[end]-y.pts[1], y.pts[end]-y.pts[1]))
         surf = Makie.surface!(scene, x.pts, y.pts, u[:,:,end], limits = limits)[end]
         scene

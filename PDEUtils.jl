@@ -103,25 +103,27 @@ function δδ(size::Int, step::Number)
              δ[i-1,i] = δ[i,i-1] = 1.0
          end
      end
-     δ[1,1:4] =  [2.0,-5.0,4.0,-1.0]
-      δ[end, end-3:end] = [-1.0,4.0,-5.0,2.0]
+    # a = [203.0/45.0,-87.0/5.0,117.0/4.0, -254.0/9.0,33.0/2.0, -27.0/5.0, 137.0/180.0]
+     #l = length(a)
+     #δ[1,1:l] = a
+     # δ[end, end-(l-1):end] = a[end:-1:1]
      return δ./step^2
   end
 
- function ⊗(A::AbstractArray{N,2},B::AbstractArray{N,2}, direction::Int) where N<:Number
+ function ⊗(A::AbstractArray,B::AbstractArray{N,2}, direction::Int) where N<:Number
      s = size(B)
-     C = zeros(N,s)
      if direction == 1
-         for i in 1:s[1]
+         C = zeros(N,s)
+         for i in 1:s[2]
              @views C[:,i] = A*B[:,i]
          end
     elseif direction == 2
-        Bt = Transpose(B)
-
-        for i in 1:s[2]
-            @views C[:,i] = A*Bt[:,i]
+        Bt = transpose(B)
+        Ct = zeros(N,s[end:-1:1])
+        for i in 1:s[1]
+            @views Ct[:,i] = A*Bt[:,i]
         end
-        C = Transpose(C)
+        C = transpose(Ct)
     else
         throw("direction too large, choose 1 for through columns and 2 for through rows")
     end

@@ -6,38 +6,44 @@ export ftd_propagate
     using SparseArrays
     using ProgressMeter
     using PDEUtils
+    using DSP
     using SignalProcessing
 
     using DiscreteAxis
 
-    const c₀ = 3*10^8
+    const c₀ = 3.0*10^8
     FFTW.set_num_threads(4)
 
-    function source(x,y,t; type)
+    function source(x,y,t; type, start)
         if type == "impulse"
+            println("x $(x.N) y = $(t.N) t = $(t.N)")
             out = zeros(x.N,y.N,t.N)
-            return out[2,:,2] = 1
+            out[2,:,2] .= 1.0
+            return out
         elseif type == "sinc"
-            k = 16
+            k = 4.0
             f₀ = c₀/(k*x.Δ)
             ω₀ = 2*pi*f₀
             fs = 1/t.Δ
-            fgrid = fs*(0:(t.N-1))/(t.N-1)
-            w = rect.(fgrid/(2*f₀))
-            wt= circshift(imag.(ifft(w)*(t.N)), round(Int,t.N/4))
+            fgrid = fftfreq(t.N, fs)
+            w = SignalProcessing.rect.(fgrid/(2.0*f₀))
+            wt= circshift(ifft(w)*(t.N), round(Int,t.N/4))
             out = unitize(wt)
-            return [xi==2 ? wt[ti] : 0.0 for xi in x.i, Y in y, ti in t.i]
+            return [xi==start ? wt[ti] : 0.0 for xi in x.i, Y in y, ti in t.i]
         elseif type == "sinusoid"
-            return [i==2 ? sin.(ω₀*T) : 0.0 for xi in x.i, Y in y, ti in t.i]
+            k = 16.0
+            f₀ = c₀/(k*x.Δ)
+            ω₀ = 2*pi*f₀
+            return [xi==start ? sin.(ω₀*T) : 0.0 for xi in x.i, Y in y, T in t]
 
         else
-            return zeros(t.N)
+            return zeros(x.N,y.N,t.N)
         end
     end
 
     # Wave Equation
     function HeugensABC!(u, t, x, y)
-        A⁺ = (1 - x.Δ/(t.Δ*c₀))
+        A⁺ = (1.0 - x.Δ/(t.Δ*c₀))
         A⁻ = 1/A⁺
 
         if x.Δ == y.Δ
@@ -46,7 +52,7 @@ export ftd_propagate
             @views u[:, 1,t] =    A⁺.*(u[1,:,t].-u[1,:,t-1])-u[1,:,t]
             @views u[:,end,t] = A⁻.*(u[:,end,t].-u[:,end,t-1])+u[:,end,t]
         else
-            B⁺ = (1 - y.Δ/(t.Δ*c₀))
+            B⁺ = (1.0 - y.Δ/(t.Δ*c₀))
             B⁻ = 1/B⁺
 
             u[1,:,t] =     A⁺.*(u[1,:,t].-u[1,:,t-1])+u[1,:,t]
@@ -58,7 +64,7 @@ export ftd_propagate
 
     # Wave Equation
     function Wave!(u, i, x, y, t, factor, δxx, δyy, s; bcs)
-        @views u[:,:,i] = factor.*(∇(u[:,:,i-1], δxx, δyy) .+ s[i-1])  .+ 2.0.*u[:,:,i-1] .- u[:,:,i-2]
+        @views u[:,:,i] = factor.*(∇(u[:,:,i-1], δxx, δyy) .+ s[:,:,i-1])  .+ 2.0.*u[:,:,i-1] .- u[:,:,i-2]
         #if boundary_conditions == "HeugensABC"
             #HeugensABC!(u, i, x.Δ, y.Δ, t.Δ)
         #end
@@ -75,7 +81,8 @@ export ftd_propagate
                             initialderivative,
                             source_type,
                             boundary_conditions = "Dirichlet",
-                            time_multiplier = 2 )
+                            source_index = 2,
+                            time_multiplier = 2.0 )
 
 
         ###############################################################################
@@ -83,22 +90,22 @@ export ftd_propagate
         ###############################################################################
             #y.N = Int64(floor((x[end]-x[1])/(y[end]-y[1])*x.N))
 
-            Δt = x.Δ/(c₀*2)
+            Δt = x.Δ/(c₀*4)
             Nt = round(Int, time_multiplier*(maximum(x.pts)-minimum(x.pts))/(c₀*Δt))
-            tmin = 0 ; tmax = tmin + Δt*Nt
+            tmin = 0.0 ; tmax = tmin + Δt*Nt
             t = LinearAxis(tmin, tmax, Δt)
 
             δxx = (δδ(x.N, x.Δ))
             δyy = (δδ(y.N, y.Δ))
 
-            u = zeros(Float64,x.N,y.N,t.N)
+            u = zeros(Complex{Float64},x.N,y.N,t.N)
             u[:,:,2] =  [initialfield(X,Y) for X in x, Y in y]
             G = [initialderivative(X,Y) for X in x, Y in y]
-            n =  [refrindex(X,Y) for X in x, Y in y]
+            n = refrindex(x.pts, y.pts, [0,0], 0)
 
-            S= source(x,y,t,type = source_type)
+            S= source(x,y,t,type = source_type, start = source_index)
 
-            println(δxx)
+            #println(δxx)
         #    S = [xi == 2 ? sin(ω₀*t[ti]) : 0.0 for xi in x.i, yi in y.i, ti in 1:(t.N-1)]
             ###############################################################################
             # MEDIUM INITIALISATION
@@ -110,7 +117,7 @@ export ftd_propagate
             factorbg = (t.Δ.*c₀).^2
 
             # callate the field at t = -1
-            @views u[:,:,1] = u[:,:,2] .- 2*t.Δ*G .+ S[1]#setup the initial conditions
+            @views u[:,:,1] = u[:,:,2] .- 2.0.*t.Δ.*G .+ S[:,:,1]#setup the initial conditions
             #initialise background
             bg = copy(u)
         ###############################################################################
@@ -123,8 +130,11 @@ export ftd_propagate
         for i in 3:t.N
             Wave!(u, i, x, y, t, factor, δxx, δyy, S; bcs = boundary_conditions)
             Wave!(bg, i, x, y, t, factorbg, δxx, δyy, S; bcs = boundary_conditions)
-
+            #=for j in x.i, k in y.i
+                isnan.(@view u[j,k,i]) && println("NaNs have infected the sim at timestep $(i)!")
+            end=#
             next!(prog)
+
         end
         println("\n------------Done!----------------")
         return t, bg, u, S
