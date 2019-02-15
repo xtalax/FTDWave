@@ -4,6 +4,7 @@ export makie_animation3D, plots_gif3D
 ###########################################################
     using Makie
     using ProgressMeter
+    # it works, dw makie is confusing
     function makie_animation3D(x,y,t,u, filepath)
         prog = Progress(t.N, 1)
         println("---------Animating Data-----------")

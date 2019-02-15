@@ -4,7 +4,6 @@ export  δ⁻, δδ, ∇
 using Base.Cartesian
 using LinearAlgebra
 using DiscreteAxis
-using SparseArrays
 #using CuArrays
 for N = 1:5
     @eval begin
@@ -80,7 +79,7 @@ function δ⁺(size::Int, step::Number)
     end
     return (1/step).*δ
 end
-
+#=
 function δ(size, step)
     δ = zeros(size,size)
     for i in 1:size
@@ -93,7 +92,7 @@ function δ(size, step)
     end
     return sparse(δ)
 end
-
+=#
 function δδ(size::Int, step::Number)
      δ = zeros(size,size)
      for i in 1:size

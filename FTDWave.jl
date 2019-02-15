@@ -27,7 +27,7 @@ export ftd_propagate
             fs = 1/t.Δ
             fgrid = fftfreq(t.N, fs)
             w = SignalProcessing.rect.(fgrid/(2.0*f₀))
-            wt= circshift(ifft(w)*(t.N), round(Int,t.N/4))
+            wt= circshift(real.(ifft(w))*(t.N), round(Int,t.N/4))
             out = unitize(wt)
             return [xi==start ? wt[ti] : 0.0 for xi in x.i, Y in y, ti in t.i]
         elseif type == "sinusoid"
@@ -65,9 +65,6 @@ export ftd_propagate
     # Wave Equation
     function Wave!(u, i, x, y, t, factor, δxx, δyy, s; bcs)
         @views u[:,:,i] = factor.*(∇(u[:,:,i-1], δxx, δyy) .+ s[:,:,i-1])  .+ 2.0.*u[:,:,i-1] .- u[:,:,i-2]
-        #if boundary_conditions == "HeugensABC"
-            #HeugensABC!(u, i, x.Δ, y.Δ, t.Δ)
-        #end
     end
 
     ###############################################################################
@@ -75,14 +72,14 @@ export ftd_propagate
     ###############################################################################
 
 
-    function ftd_propagate(x, y,;
+    function ftd_propagate(x, y, t;
                             refrindex,
                             initialfield,
                             initialderivative,
                             source_type,
                             boundary_conditions = "Dirichlet",
                             source_index = 2,
-                            time_multiplier = 2.0 )
+                            )
 
 
         ###############################################################################
@@ -90,23 +87,20 @@ export ftd_propagate
         ###############################################################################
             #y.N = Int64(floor((x[end]-x[1])/(y[end]-y[1])*x.N))
 
-            Δt = x.Δ/(c₀*4)
-            Nt = round(Int, time_multiplier*(maximum(x.pts)-minimum(x.pts))/(c₀*Δt))
-            tmin = 0.0 ; tmax = tmin + Δt*Nt
-            t = LinearAxis(tmin, tmax, Δt)
 
+
+            #These are magic matricies which do the 2nd partial wrt space, they have Dirichlet baked in to them
+            # they have 2 along the diagonal, and -1 one off the diagonal
             δxx = (δδ(x.N, x.Δ))
             δyy = (δδ(y.N, y.Δ))
 
-            u = zeros(Complex{Float64},x.N,y.N,t.N)
+            u = zeros(Float64,x.N,y.N,t.N)
             u[:,:,2] =  [initialfield(X,Y) for X in x, Y in y]
             G = [initialderivative(X,Y) for X in x, Y in y]
             n = refrindex(x.pts, y.pts, [0,0], 0)
 
             S= source(x,y,t,type = source_type, start = source_index)
 
-            #println(δxx)
-        #    S = [xi == 2 ? sin(ω₀*t[ti]) : 0.0 for xi in x.i, yi in y.i, ti in 1:(t.N-1)]
             ###############################################################################
             # MEDIUM INITIALISATION
             ###############################################################################

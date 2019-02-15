@@ -1,6 +1,11 @@
 using SymPy
 
-# expands a taylor series about u0 to determine the value of the function at the boundary
+'''
+Expands a taylor series about a point at the boundary in order to infer its derivative
+(The program works wonderfully - the concept not so much.)
+
+n is the number of terms, order is the desired order of the derivative
+'''
 
 n = 7
 order = 2
