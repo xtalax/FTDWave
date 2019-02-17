@@ -23,8 +23,11 @@ Please submit any aesthetic results to Aesthetic function graphposting on FB :)
 
 Add dependencies as follows:
 > using Pkg 
+
 > Pkg.add("depends1")
+
 > Pkg.add("depends2")
+
 > ...
 
 List of depends:
