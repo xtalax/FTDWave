@@ -20,3 +20,18 @@ some external packages.
 Don't hesitate to send me a message if you run in to trouble or have any questionsp
 
 Please submit any aesthetic results to Aesthetic function graphposting on FB :)
+
+Add dependencies as follows:
+> using Pkg 
+> Pkg.add("depends1")
+> Pkg.add("depends2")
+> ...
+
+List of depends:
+
+DSP
+FFTW
+ProgressMeter
+Makie
+Plots
+
