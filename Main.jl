@@ -44,7 +44,9 @@
         ymax-ymin
     end
 
-#refrindex - the function determining the refractive index
+#refrindex - the function determining the refractive index - because of julia's
+# multiple dispatch feature the correct function will be called from the one above and one below
+#
 
 
     function refrindex(x,y, origin_prime= [0.0,0.0], θ=0.0)
@@ -122,12 +124,13 @@
                                         initialfield = f,
                                         initialderivative = g,
                                         refrindex = refrindex,
-                                        source_type = "none",
+                                        source_type = "none", # change this to "sinusoid" or "sinc" to feed in such waveforms from the minumum of x
                                         )
+
     # plotting response will give an animation only of the response from any target (refractive index)
     # that you program in to the region
     response = field.-background
 
 
     # this uses EZanimate, an animation utilities module that I made
-    @time makie_animation3D(x,y,t, field,filepath)
+    @time makie_animation3D(x,y,t, field, filepath)

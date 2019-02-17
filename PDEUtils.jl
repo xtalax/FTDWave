@@ -5,7 +5,7 @@ using Base.Cartesian
 using LinearAlgebra
 using DiscreteAxis
 #using CuArrays
-for N = 1:5
+for N = 1:5 # An (unused) function generator that is straight witchcraft and makes functions for the laplacian from 1 to 5D
     @eval begin
         function laplacian(A::Array{T,$N}) where T<:Number
             B = similar(A)
@@ -30,10 +30,7 @@ end
 #function laplacian(A::AbstractArray{T}, ) where T <: Number
 
 
-
-
-
-function δ⁻(size::Int, step::Number)
+function δ⁻(size::Int, step::Number) # reverse difference matrix generator
     δ = zeros(size,size)
     for i in 1:size
         δ[i,i] = 1
@@ -44,7 +41,7 @@ function δ⁻(size::Int, step::Number)
     return (1/step).*δ
 end
 
-function δ⁺(F::AbstractVector{N}, axis::DAxis) where N <: Number
+function δ⁺(F::AbstractVector{N}, axis::DAxis) where N <: Number # forward difference matrix generator
     δ = similar(F)
     for i in axis.i[1:end-1]
         δ[i] = (F[i+1]-F[i])/axis.Δ[i]
@@ -93,7 +90,7 @@ function δ(size, step)
     return sparse(δ)
 end
 =#
-function δδ(size::Int, step::Number)
+function δδ(size::Int, step::Number) # computes the 2nd order differentiator matrix
      δ = zeros(size,size)
      for i in 1:size
          δ[i,i] = -2.0
@@ -109,6 +106,7 @@ function δδ(size::Int, step::Number)
      return δ./step^2
   end
 
+# this function splits the matrix B in to vectors along the specified direction, and then multiplies each vector by the matrix A
  function ⊗(A::AbstractArray,B::AbstractArray{N,2}, direction::Int) where N<:Number
      s = size(B)
      if direction == 1
@@ -128,7 +126,7 @@ function δδ(size::Int, step::Number)
     end
     return C
 end
-
+# this is a test that does exactly the same thing as the function above
  function SliceProduct(A::Array{N,2},B::Array{N,2}, direction::Int) where N<:Number
      s = size(B)
      C = zeros(N,s)
