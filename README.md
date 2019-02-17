@@ -14,4 +14,6 @@ The starting time derivative of the field is also defined in main and is called 
 The simulation is defined in the FTDWave.jl file, using some utility functions from the other modules in this package and also
 some external packages.
 
-Don't hesitate to send me a message if you run in to trouble or have any questions
+Don't hesitate to send me a message if you run in to trouble or have any questionsp
+
+Please submit any aesthetic results to Aesthetic function graphposting on FB :)
