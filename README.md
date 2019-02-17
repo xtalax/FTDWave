@@ -1,4 +1,7 @@
 # FTDWave - Julia 1.1.0
+
+Have a look in the Animate branch for the working code - i'm having trouble merging it to master
+
 solutions to the scalar 2d wave eqn with the finite difference method
 
 
