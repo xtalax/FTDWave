@@ -41,7 +41,7 @@ export ftd_propagate
         end
     end
 
-    # Wave Equation
+    # this implements a kind of absorbing boundary condition that doesn't actually work that well
     function HeugensABC!(u, t, x, y)
         A⁺ = (1.0 - x.Δ/(t.Δ*c₀))
         A⁻ = 1/A⁺
@@ -94,7 +94,7 @@ export ftd_propagate
             δxx = (δδ(x.N, x.Δ))
             δyy = (δδ(y.N, y.Δ))
 
-            u = zeros(Float64,x.N,y.N,t.N)
+            u = zeros(Float64,x.N,y.N,t.N) # make spacetime
             u[:,:,2] =  [initialfield(X,Y) for X in x, Y in y]
             G = [initialderivative(X,Y) for X in x, Y in y]
             n = refrindex(x.pts, y.pts, [0,0], 0)

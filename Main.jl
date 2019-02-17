@@ -133,4 +133,4 @@
 
 
     # this uses EZanimate, an animation utilities module that I made
-    @time makie_animation3D(x,y,t, field, filepath)
+    @time makie_animation3D(x,y,t, field, filepath) # Feed in axies and a spacetime to animate it, order the dims like x, y, t
