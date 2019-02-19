@@ -3,7 +3,6 @@ export ftd_propagate
 
     using LinearAlgebra
     using FFTW
-    using SparseArrays
     using ProgressMeter
     using PDEUtils
     using DSP
@@ -21,17 +20,13 @@ export ftd_propagate
             out[2,:,2] .= 1.0
             return out
         elseif type == "sinc"
-            k = 4.0
+            k = 10.0
             f₀ = c₀/(k*x.Δ)
-            ω₀ = 2*pi*f₀
-            fs = 1/t.Δ
-            fgrid = fftfreq(t.N, fs)
-            w = SignalProcessing.rect.(fgrid/(2.0*f₀))
-            wt= circshift(real.(ifft(w))*(t.N), round(Int,t.N/4))
-            out = unitize(wt)
+            wt = sinc.(f₀.*(t .- maximum(t)/5)) .* gaussian.(f₀.*(t .- maximum(t)/5)/5)
+
             return [xi==start ? wt[ti] : 0.0 for xi in x.i, Y in y, ti in t.i]
         elseif type == "sinusoid"
-            k = 16.0
+            k = 10.0
             f₀ = c₀/(k*x.Δ)
             ω₀ = 2*pi*f₀
             return [xi==start ? sin.(ω₀*T) : 0.0 for xi in x.i, Y in y, T in t]

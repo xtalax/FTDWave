@@ -4,6 +4,8 @@ using FFTW
 FFTW.set_num_threads(4)
 
 rect(x::Number) = abs(x) > 0.5 ? 0 : 1
+sinc(x) = x == 0 ? 1 : sinpi(x)/(π*x)
+gaussian(x) = exp(-x.^2)
 
 function convolve(a::AbstractArray,b=a::AbstractArray)
      X = fft(a)/length(a);  Y = fft(b)/length(b)
@@ -28,6 +30,7 @@ unitize(A::AbstractArray) = A./(maximum(abs.(A)))
 
 dB(a::Number) = 20*log10(abs(a))
 
+Base.*(a::AbstractArray) = [x' for x in a]
 #x = -2:0.01:2
 
 #fs = 1/0.01

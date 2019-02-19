@@ -46,6 +46,7 @@
 
 #refrindex - the function determining the refractive index - because of julia's
 # multiple dispatch feature the correct function will be called from the one above and one below
+# depending on the number of args
 #
 
 
@@ -82,7 +83,7 @@
     # ********IMPORTANT**********
     # You might break it if the axies are not the same length - I do have a build in which this is fixed
     # and a lot of other optimisations have been implemented, but in that version it is not possible
-    # to animate the field and generate aesthetic graphs
+    # to animate the field and generate aesthetic graphs. If it breaks when you try this
     filepath = "/path/to/your/animations/folder/here"
 
     N = 75
